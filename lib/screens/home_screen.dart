@@ -50,12 +50,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 24),
 
-                // Main content area
-                Expanded(child: _buildMainContent(context, appState)),
+                // Main content area - using flexible layout for better balance
+                Flexible(child: _buildMainContent(context, appState)),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Action buttons
+                // Action buttons - now with better positioning
                 _buildActionButtons(context, appState),
               ],
             ),
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           if (!appState.isCameraAvailable)
             Container(
               padding: const EdgeInsets.all(16),
@@ -197,78 +197,93 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActionButtons(BuildContext context, AppState appState) {
-    return Column(
-      children: [
-        if (appState.currentImage != null) ...[
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed:
-                      appState.processingStatus == ProcessingStatus.processing
-                      ? null
-                      : () => appState.processImageToDXF(),
-                  icon: const Icon(Icons.transform),
-                  label: const Text('Convert to DXF'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          if (appState.currentImage != null) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed:
+                        appState.processingStatus == ProcessingStatus.processing
+                        ? null
+                        : () => appState.processImageToDXF(),
+                    icon: const Icon(Icons.transform),
+                    label: const Text('Convert to DXF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => appState.clearCurrentImage(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('New Image'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => appState.clearCurrentImage(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('New Image'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (appState.dxfFilePath != null) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => appState.shareDXFFile(),
-                icon: const Icon(Icons.share),
-                label: const Text('Share DXF File'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+              ],
             ),
-          ],
-        ] else ...[
-          Row(
-            children: [
-              Expanded(
+            if (appState.dxfFilePath != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: appState.isCameraAvailable
-                      ? () => appState.captureImage()
-                      : null,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Camera'),
+                  onPressed: () => appState.shareDXFFile(),
+                  icon: const Icon(Icons.share),
+                  label: const Text('Share DXF File'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => appState.pickImageFromGallery(),
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Gallery'),
-                ),
-              ),
             ],
-          ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: appState.isCameraAvailable
+                        ? () => appState.captureImage()
+                        : null,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => appState.pickImageFromGallery(),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                 const SizedBox(height: 12),
+              ],
+            ),
+            const SizedBox(height: 36),
+          ],
         ],
-      ],
+      ),
     );
   }
 
