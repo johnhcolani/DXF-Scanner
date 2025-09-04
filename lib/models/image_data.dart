@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 class ImageData {
   final String id;
   final String? filePath;
-  final Uint8List? imageBytes;
+  Uint8List? imageBytes; // Made mutable for cropping
   final ui.Image? image;
   final DateTime createdAt;
   final ProcessingStatus status;
@@ -50,5 +50,10 @@ enum ProcessingStatus {
   processing,
   completed,
   failed,
+}
+
+enum PaperOrientation {
+  portrait,
+  landscape,
 }
 

@@ -5,6 +5,7 @@ import '../models/image_data.dart';
 import '../widgets/camera_widget.dart';
 import '../widgets/image_preview.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/image_crop_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,23 +42,25 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Status card
-                _buildStatusCard(context, appState),
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Status card
+                  _buildStatusCard(context, appState),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                // Main content area - using flexible layout for better balance
-                Flexible(child: _buildMainContent(context, appState)),
+                  // Main content area - using expanded for better space management
+                  Expanded(child: _buildMainContent(context, appState)),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 16),
 
-                // Action buttons - now with better positioning
-                _buildActionButtons(context, appState),
-              ],
+                  // Action buttons - now with better positioning
+                  _buildActionButtons(context, appState),
+                ],
+              ),
             ),
           );
         },
@@ -138,6 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
       return ImagePreviewWidget(imageData: appState.currentImage!);
     }
 
+    // Show camera preview if available, otherwise show welcome content
+    if (appState.isCameraAvailable && appState.cameraController != null) {
+      return const CameraWidget();
+    }
+
     return _buildWelcomeContent(context, appState);
   }
 
@@ -201,21 +209,36 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (appState.currentImage != null) ...[
+            // First row - Convert to DXF button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed:
+                    appState.processingStatus == ProcessingStatus.processing
+                    ? null
+                    : () => appState.processImageToDXF(),
+                icon: const Icon(Icons.transform),
+                label: const Text('Convert to DXF'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Second row - Crop and New Image buttons
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        appState.processingStatus == ProcessingStatus.processing
-                        ? null
-                        : () => appState.processImageToDXF(),
-                    icon: const Icon(Icons.transform),
-                    label: const Text('Convert to DXF'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showCropDialog(context, appState),
+                    icon: const Icon(Icons.crop),
+                    label: const Text('Crop'),
+                    style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -277,7 +300,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
               ],
             ),
             const SizedBox(height: 36),
@@ -326,6 +348,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showCropDialog(BuildContext context, AppState appState) {
+    if (appState.currentImage == null) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ImageCropWidget(
+          imageData: appState.currentImage!,
+          onCropComplete: (croppedImageBytes) {
+            // Update the image data with cropped version
+            appState.currentImage!.imageBytes = croppedImageBytes;
+            Navigator.of(context).pop();
+            
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Image cropped successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _showInfoDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -342,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(height: 16),
             Text('Features:', style: TextStyle(fontWeight: FontWeight.bold)),
             Text('• Camera capture and gallery selection'),
-            Text('• Image preprocessing and edge detection'),
+            Text('• Image cropping and preprocessing'),
             Text('• Vector path extraction'),
             Text('• DXF file generation'),
             Text('• File sharing capabilities'),

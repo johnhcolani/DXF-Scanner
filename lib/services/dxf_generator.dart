@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math';
 import 'package:path_provider/path_provider.dart';
 import '../models/image_data.dart';
 import 'image_processor.dart';
@@ -30,53 +31,82 @@ class DXFGenerator {
   String _createDXFContent(List<List<Point>> contours) {
     final StringBuffer buffer = StringBuffer();
     
-    // DXF Header
+    // Calculate bounds for proper scaling
+    final bounds = _calculateBounds(contours);
+    final scale = _calculateScale(bounds);
+    
+    // DXF Header Section
     buffer.writeln('0');
     buffer.writeln('SECTION');
     buffer.writeln('2');
     buffer.writeln('HEADER');
+    
+    // AutoCAD version (AC1021 = AutoCAD 2007/2008)
     buffer.writeln('9');
-    buffer.writeln(DXFConstants.ACADVER);
+    buffer.writeln('\$ACADVER');
     buffer.writeln('1');
     buffer.writeln('AC1021');
+    
+    // Drawing code page
     buffer.writeln('9');
-    buffer.writeln(DXFConstants.DWGCODEPAGE);
+    buffer.writeln('\$DWGCODEPAGE');
     buffer.writeln('3');
     buffer.writeln('ANSI_1252');
+    
+    // Insertion base point
     buffer.writeln('9');
-    buffer.writeln(DXFConstants.INSBASE);
+    buffer.writeln('\$INSBASE');
     buffer.writeln('10');
     buffer.writeln('0.0');
     buffer.writeln('20');
     buffer.writeln('0.0');
     buffer.writeln('30');
     buffer.writeln('0.0');
+    
+    // Drawing extents
     buffer.writeln('9');
-    buffer.writeln(DXFConstants.EXTMIN);
+    buffer.writeln('\$EXTMIN');
     buffer.writeln('10');
-    buffer.writeln('0.0');
+    buffer.writeln((bounds.minX * scale).toStringAsFixed(6));
     buffer.writeln('20');
+    buffer.writeln((bounds.minY * scale).toStringAsFixed(6));
+    buffer.writeln('30');
     buffer.writeln('0.0');
+    
     buffer.writeln('9');
-    buffer.writeln(DXFConstants.EXTMAX);
+    buffer.writeln('\$EXTMAX');
     buffer.writeln('10');
-    buffer.writeln('1000.0');
+    buffer.writeln((bounds.maxX * scale).toStringAsFixed(6));
     buffer.writeln('20');
-    buffer.writeln('1000.0');
+    buffer.writeln((bounds.maxY * scale).toStringAsFixed(6));
+    buffer.writeln('30');
+    buffer.writeln('0.0');
+    
+    // Current layer
+    buffer.writeln('9');
+    buffer.writeln('\$CLAYER');
+    buffer.writeln('8');
+    buffer.writeln('0');
+    
+    // End header section
     buffer.writeln('0');
     buffer.writeln('ENDSEC');
 
-    // Tables section
+    // Tables Section
     buffer.writeln('0');
     buffer.writeln('SECTION');
     buffer.writeln('2');
     buffer.writeln('TABLES');
+    
+    // Layer table
     buffer.writeln('0');
     buffer.writeln('TABLE');
     buffer.writeln('2');
     buffer.writeln('LAYER');
     buffer.writeln('70');
-    buffer.writeln('1');
+    buffer.writeln('1'); // Number of layers
+    
+    // Default layer (0)
     buffer.writeln('0');
     buffer.writeln('LAYER');
     buffer.writeln('2');
@@ -84,53 +114,49 @@ class DXFGenerator {
     buffer.writeln('70');
     buffer.writeln('0');
     buffer.writeln('62');
-    buffer.writeln('7');
+    buffer.writeln('7'); // White color
     buffer.writeln('6');
     buffer.writeln('CONTINUOUS');
+    
+    // End layer table
     buffer.writeln('0');
     buffer.writeln('ENDTAB');
+    
+    // End tables section
     buffer.writeln('0');
     buffer.writeln('ENDSEC');
 
-    // Entities section
+    // Entities Section
     buffer.writeln('0');
     buffer.writeln('SECTION');
     buffer.writeln('2');
     buffer.writeln('ENTITIES');
 
-    // Add polylines for each contour
+    // Add LWPOLYLINE entities for each contour (more compatible than POLYLINE)
     for (int i = 0; i < contours.length; i++) {
       final List<Point> contour = contours[i];
       if (contour.length < 2) continue;
 
-      // Create polyline
+      // Create LWPOLYLINE (Lightweight Polyline)
       buffer.writeln('0');
-      buffer.writeln('POLYLINE');
-      buffer.writeln('8');
+      buffer.writeln('LWPOLYLINE');
+      buffer.writeln('5'); // Handle
+      buffer.writeln('${100 + i}');
+      buffer.writeln('8'); // Layer
       buffer.writeln('0');
-      buffer.writeln('66');
-      buffer.writeln('1');
-      buffer.writeln('70');
+      buffer.writeln('70'); // Flags
       buffer.writeln('1'); // Closed polyline
+      buffer.writeln('90'); // Number of vertices
+      buffer.writeln('${contour.length}');
 
-      // Add vertices
+      // Add vertex coordinates
       for (int j = 0; j < contour.length; j++) {
         final Point point = contour[j];
-        buffer.writeln('0');
-        buffer.writeln('VERTEX');
-        buffer.writeln('8');
-        buffer.writeln('0');
-        buffer.writeln('10');
-        buffer.writeln(point.x.toStringAsFixed(3));
-        buffer.writeln('20');
-        buffer.writeln(point.y.toStringAsFixed(3));
-        buffer.writeln('30');
-        buffer.writeln('0.0');
+        buffer.writeln('10'); // X coordinate
+        buffer.writeln((point.x * scale).toStringAsFixed(6));
+        buffer.writeln('20'); // Y coordinate
+        buffer.writeln((point.y * scale).toStringAsFixed(6));
       }
-
-      // End polyline
-      buffer.writeln('0');
-      buffer.writeln('SEQEND');
     }
 
     // End entities section
@@ -142,6 +168,38 @@ class DXFGenerator {
     buffer.writeln('EOF');
 
     return buffer.toString();
+  }
+
+  // Calculate bounds of all contours
+  Bounds _calculateBounds(List<List<Point>> contours) {
+    double minX = double.infinity;
+    double minY = double.infinity;
+    double maxX = double.negativeInfinity;
+    double maxY = double.negativeInfinity;
+
+    for (final contour in contours) {
+      for (final point in contour) {
+        minX = min(minX, point.x);
+        minY = min(minY, point.y);
+        maxX = max(maxX, point.x);
+        maxY = max(maxY, point.y);
+      }
+    }
+
+    return Bounds(minX, minY, maxX, maxY);
+  }
+
+  // Calculate appropriate scale factor
+  double _calculateScale(Bounds bounds) {
+    final width = bounds.maxX - bounds.minX;
+    final height = bounds.maxY - bounds.minY;
+    final maxDimension = max(width, height);
+    
+    // Scale to fit in a reasonable range (e.g., 100 units)
+    if (maxDimension > 0) {
+      return 100.0 / maxDimension;
+    }
+    return 1.0;
   }
 
   // Generate DXF from image data
@@ -211,11 +269,12 @@ class DXFGenerator {
   }
 }
 
-// DXF constants
-class DXFConstants {
-  static const String ACADVER = '\$ACADVER';
-  static const String DWGCODEPAGE = '\$DWGCODEPAGE';
-  static const String INSBASE = '\$INSBASE';
-  static const String EXTMIN = '\$EXTMIN';
-  static const String EXTMAX = '\$EXTMAX';
+// Bounds class for calculating drawing extents
+class Bounds {
+  final double minX;
+  final double minY;
+  final double maxX;
+  final double maxY;
+
+  Bounds(this.minX, this.minY, this.maxX, this.maxY);
 }

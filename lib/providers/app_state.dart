@@ -32,6 +32,10 @@ class AppState extends ChangeNotifier {
   List<String> _processingSteps = [];
   List<String> get processingSteps => _processingSteps;
 
+  // Paper orientation mode
+  PaperOrientation _paperOrientation = PaperOrientation.portrait;
+  PaperOrientation get paperOrientation => _paperOrientation;
+
   // Services
   final ImageCaptureService _imageCaptureService = ImageCaptureService();
   final ImageProcessor _imageProcessor = ImageProcessor();
@@ -62,7 +66,9 @@ class AppState extends ChangeNotifier {
       }
 
       _addProcessingStep('Capturing image...');
-      final ImageData? imageData = await _imageCaptureService.captureImage();
+      final ImageData? imageData = await _imageCaptureService.captureImage(
+        paperOrientation: _paperOrientation,
+      );
       
       if (imageData == null) {
         _setError('Failed to capture image');
@@ -207,6 +213,17 @@ class AppState extends ChangeNotifier {
 
   // Get camera preview widget
   Widget? getCameraPreview() => _imageCaptureService.getCameraPreview();
+
+  // Request camera permission
+  Future<bool> requestCameraPermission() async {
+    return await _imageCaptureService.requestCameraPermission();
+  }
+
+  // Change paper orientation
+  void setPaperOrientation(PaperOrientation orientation) {
+    _paperOrientation = orientation;
+    notifyListeners();
+  }
 
   // Private helper methods
   void _setProcessingStatus(ProcessingStatus status) {

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import '../models/image_data.dart';
+import 'image_crop_widget.dart';
 
 class ImagePreviewWidget extends StatefulWidget {
   final ImageData imageData;
@@ -48,19 +49,27 @@ class _ImagePreviewWidgetState extends State<ImagePreviewWidget> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Row(
               children: [
                 const Icon(Icons.image, color: Colors.blue),
                 const SizedBox(width: 8),
-                Text(
-                  'Image Preview',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Image Preview',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.crop),
+                  onPressed: () => _showCropDialog(context),
+                  tooltip: 'Crop Image',
+                ),
                 IconButton(
                   icon: const Icon(Icons.info_outline),
                   onPressed: () => _showImageInfo(context),
@@ -70,8 +79,9 @@ class _ImagePreviewWidgetState extends State<ImagePreviewWidget> {
             
             const SizedBox(height: 16),
             
-            // Image display
-            Expanded(
+            // Image display - using flexible height
+            SizedBox(
+              height: 300, // Fixed height to prevent overflow
               child: _buildImageDisplay(),
             ),
             
@@ -229,6 +239,33 @@ class _ImagePreviewWidgetState extends State<ImagePreviewWidget> {
     if (filePath.contains('camera')) return 'Camera';
     if (filePath.contains('gallery')) return 'Gallery';
     return 'File';
+  }
+
+  void _showCropDialog(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ImageCropWidget(
+          imageData: widget.imageData,
+          onCropComplete: (Uint8List croppedImageBytes) {
+            // Update the image data with cropped version
+            setState(() {
+              widget.imageData.imageBytes = croppedImageBytes;
+              _isLoading = true;
+            });
+            _decodeImage();
+            Navigator.of(context).pop();
+            
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Image cropped successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   void _showImageInfo(BuildContext context) {

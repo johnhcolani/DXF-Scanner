@@ -35,25 +35,163 @@ class ImageProcessor {
     }
   }
 
-  // Extract contours from binary image (simplified version)
+  // Extract contours from binary image using edge detection
   List<List<Point>> extractContours(img.Image image) {
     final List<List<Point>> contours = [];
 
-    // For now, return a simple contour based on image dimensions
-    // This is a placeholder that will be enhanced later
+    try {
+      // Apply edge detection (Canny-like algorithm)
+      final edgeImage = _detectEdges(image);
+      
+      // Find contours using a simple edge following algorithm
+      final foundContours = _findContours(edgeImage);
+      
+      // Filter and simplify contours
+      for (final contour in foundContours) {
+        if (contour.length >= 3) { // Minimum 3 points for a valid contour
+          contours.add(contour);
+        }
+      }
+      
+      // If no contours found, create a simple border contour
+      if (contours.isEmpty) {
+        contours.add(_createBorderContour(image));
+      }
+      
+    } catch (e) {
+      print('Error extracting contours: $e');
+      // Fallback to simple border contour
+      contours.add(_createBorderContour(image));
+    }
+
+    return contours;
+  }
+
+  // Create a simple border contour as fallback
+  List<Point> _createBorderContour(img.Image image) {
     final int width = image.width;
     final int height = image.height;
-
-    // Create a simple rectangular contour
-    final List<Point> contour = [
+    
+    return [
       Point(0, 0),
       Point(width.toDouble(), 0),
       Point(width.toDouble(), height.toDouble()),
       Point(0, height.toDouble()),
     ];
+  }
 
-    contours.add(contour);
+  // Simple edge detection
+  img.Image _detectEdges(img.Image image) {
+    // Convert to grayscale if not already
+    img.Image grayImage = image;
+    if (image.numChannels > 1) {
+      grayImage = img.grayscale(image);
+    }
+    
+    // Apply Sobel edge detection
+    final sobelX = img.convolution(grayImage, [
+      -1, 0, 1,
+      -2, 0, 2,
+      -1, 0, 1
+    ]);
+    
+    final sobelY = img.convolution(grayImage, [
+      -1, -2, -1,
+       0,  0,  0,
+       1,  2,  1
+    ]);
+    
+    // Combine X and Y gradients
+    final edgeImage = img.Image(width: grayImage.width, height: grayImage.height);
+    
+    for (int y = 0; y < grayImage.height; y++) {
+      for (int x = 0; x < grayImage.width; x++) {
+        final pixelX = sobelX.getPixel(x, y);
+        final pixelY = sobelY.getPixel(x, y);
+        
+        final gx = pixelX.r;
+        final gy = pixelY.r;
+        
+        final magnitude = sqrt(gx * gx + gy * gy).round();
+        final edgeValue = magnitude > 50 ? 255 : 0; // Threshold
+        
+        edgeImage.setPixel(x, y, img.ColorRgb8(edgeValue, edgeValue, edgeValue));
+      }
+    }
+    
+    return edgeImage;
+  }
+
+  // Find contours using edge following
+  List<List<Point>> _findContours(img.Image edgeImage) {
+    final List<List<Point>> contours = [];
+    final List<List<bool>> visited = List.generate(
+      edgeImage.height,
+      (i) => List.generate(edgeImage.width, (j) => false),
+    );
+    
+    for (int y = 0; y < edgeImage.height; y++) {
+      for (int x = 0; x < edgeImage.width; x++) {
+        if (!visited[y][x] && _isEdgePixel(edgeImage, x, y)) {
+          final contour = _traceContour(edgeImage, visited, x, y);
+          if (contour.length >= 3) {
+            contours.add(contour);
+          }
+        }
+      }
+    }
+    
     return contours;
+  }
+
+  // Check if pixel is an edge pixel
+  bool _isEdgePixel(img.Image image, int x, int y) {
+    if (x < 0 || x >= image.width || y < 0 || y >= image.height) {
+      return false;
+    }
+    final pixel = image.getPixel(x, y);
+    return pixel.r > 128; // White pixels are edges
+  }
+
+  // Trace a contour starting from an edge pixel
+  List<Point> _traceContour(img.Image image, List<List<bool>> visited, int startX, int startY) {
+    final List<Point> contour = [];
+    final List<Point> stack = [Point(startX.toDouble(), startY.toDouble())];
+    
+    // 8-connected neighbors
+    final List<Point> neighbors = [
+      Point(-1, -1), Point(0, -1), Point(1, -1),
+      Point(-1,  0),               Point(1,  0),
+      Point(-1,  1), Point(0,  1), Point(1,  1),
+    ];
+    
+    while (stack.isNotEmpty) {
+      final current = stack.removeLast();
+      final x = current.x.round();
+      final y = current.y.round();
+      
+      if (x < 0 || x >= image.width || y < 0 || y >= image.height || visited[y][x]) {
+        continue;
+      }
+      
+      if (!_isEdgePixel(image, x, y)) {
+        continue;
+      }
+      
+      visited[y][x] = true;
+      contour.add(current);
+      
+      // Add neighbors to stack
+      for (final neighbor in neighbors) {
+        final nx = x + neighbor.x.round();
+        final ny = y + neighbor.y.round();
+        if (nx >= 0 && nx < image.width && ny >= 0 && ny < image.height && !visited[ny][nx]) {
+          stack.add(Point(nx.toDouble(), ny.toDouble()));
+        }
+      }
+    }
+    
+    return contour;
   }
 
   // Simplify contour using Douglas-Peucker algorithm

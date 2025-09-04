@@ -43,7 +43,7 @@ class ImageCaptureService {
   }
 
   // Camera capture
-  Future<ImageData?> captureImage() async {
+  Future<ImageData?> captureImage({PaperOrientation? paperOrientation}) async {
     try {
       if (_cameraController == null || !_cameraController!.value.isInitialized) {
         await initializeCamera();
