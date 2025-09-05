@@ -80,7 +80,7 @@ class ImageProcessor {
     ];
   }
 
-  // Simple edge detection
+  // Simple edge detection using gradient calculation
   img.Image _detectEdges(img.Image image) {
     // Convert to grayscale if not already
     img.Image grayImage = image;
@@ -88,32 +88,24 @@ class ImageProcessor {
       grayImage = img.grayscale(image);
     }
     
-    // Apply Sobel edge detection
-    final sobelX = img.convolution(grayImage, [
-      -1, 0, 1,
-      -2, 0, 2,
-      -1, 0, 1
-    ]);
-    
-    final sobelY = img.convolution(grayImage, [
-      -1, -2, -1,
-       0,  0,  0,
-       1,  2,  1
-    ]);
-    
-    // Combine X and Y gradients
+    // Create edge image
     final edgeImage = img.Image(width: grayImage.width, height: grayImage.height);
     
-    for (int y = 0; y < grayImage.height; y++) {
-      for (int x = 0; x < grayImage.width; x++) {
-        final pixelX = sobelX.getPixel(x, y);
-        final pixelY = sobelY.getPixel(x, y);
+    // Apply simple gradient-based edge detection
+    for (int y = 1; y < grayImage.height - 1; y++) {
+      for (int x = 1; x < grayImage.width - 1; x++) {
+        // Get surrounding pixels
+        final center = grayImage.getPixel(x, y).r;
+        final right = grayImage.getPixel(x + 1, y).r;
+        final bottom = grayImage.getPixel(x, y + 1).r;
         
-        final gx = pixelX.r;
-        final gy = pixelY.r;
+        // Calculate gradients
+        final gx = (right - center).abs();
+        final gy = (bottom - center).abs();
         
+        // Combine gradients
         final magnitude = sqrt(gx * gx + gy * gy).round();
-        final edgeValue = magnitude > 50 ? 255 : 0; // Threshold
+        final edgeValue = magnitude > 30 ? 255 : 0; // Threshold
         
         edgeImage.setPixel(x, y, img.ColorRgb8(edgeValue, edgeValue, edgeValue));
       }
