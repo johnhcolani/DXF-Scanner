@@ -18,33 +18,99 @@ class ProcessingProgressWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                // Animated progress indicator
+                // Large animated progress indicator
                 SizedBox(
-                  width: 120,
-                  height: 120,
+                  width: 200,
+                  height: 200,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
+                      // Outer ring
                       CircularProgressIndicator(
                         value: appState.processingProgress,
-                        strokeWidth: 8,
+                        strokeWidth: 16,
                         backgroundColor: Colors.grey[300],
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                      Text(
-                        '${(appState.processingProgress * 100).toInt()}%',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                      // Inner ring for visual depth
+                      SizedBox(
+                        width: 160,
+                        height: 160,
+                        child: CircularProgressIndicator(
+                          value: appState.processingProgress,
+                          strokeWidth: 8,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ),
                         ),
                       ),
+                                              // Progress percentage text
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${(appState.processingProgress * 100).toInt()}%',
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: 36,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${(appState.processingProgress * 100).toStringAsFixed(1)}%',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Step ${appState.processingSteps.length}/4',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
                 
                 const SizedBox(height: 32),
+                
+                // Linear progress bar
+                Container(
+                  width: double.infinity,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: appState.processingProgress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
                 
                 // Processing message
                 Text(

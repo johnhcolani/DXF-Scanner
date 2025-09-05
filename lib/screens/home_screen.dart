@@ -4,6 +4,7 @@ import '../providers/app_state.dart';
 import '../models/image_data.dart';
 import '../widgets/camera_widget.dart';
 import '../widgets/image_preview.dart';
+import '../widgets/architectural_corner_detection.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/image_crop_widget.dart';
 
@@ -180,7 +181,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (appState.currentImage != null) {
-      return ImagePreviewWidget(imageData: appState.currentImage!);
+      return Column(
+        children: [
+          // Show the image preview
+          Expanded(
+            flex: 3,
+            child: ImagePreviewWidget(imageData: appState.currentImage!),
+          ),
+          const SizedBox(height: 16),
+          // Add corner detection button
+          ElevatedButton.icon(
+            onPressed: () => _showCornerDetection(context, appState),
+            icon: const Icon(Icons.architecture),
+            label: const Text('Detect Architectural Corners'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
     }
 
     // Show camera preview if available, otherwise show direct image selection interface
@@ -443,6 +465,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showCornerDetection(BuildContext context, AppState appState) {
+    if (appState.currentImage == null) return;
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Architectural Corner Detection'),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          body: ArchitecturalCornerDetection(
+            imageBytes: appState.currentImage!.imageBytes!,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showInfoDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -460,6 +501,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('Features:', style: TextStyle(fontWeight: FontWeight.bold)),
             Text('• Camera capture and gallery selection'),
             Text('• Image cropping and preprocessing'),
+            Text('• Corner detection and measurement'),
             Text('• Vector path extraction'),
             Text('• DXF file generation'),
             Text('• File sharing capabilities'),

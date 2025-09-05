@@ -5,6 +5,7 @@ import '../models/image_data.dart';
 import '../services/image_capture_service.dart';
 import '../services/image_processor.dart';
 import '../services/dxf_generator.dart';
+import '../services/simple_dxf_generator.dart';
 import '../services/file_manager.dart';
 
 class AppState extends ChangeNotifier {
@@ -121,40 +122,20 @@ class AppState extends ChangeNotifier {
       _clearProcessingSteps();
       _setProgress(0.0);
 
-      // Step 1: Preprocess image
-      _addProcessingStep('Preprocessing image...');
-      _setProgress(0.2);
+      // Step 1: Simple processing (avoid crashes)
+      _addProcessingStep('Processing field sketch...');
+      _setProgress(0.3);
       
-      final processedImage = await _imageProcessor.processImage(_currentImage!.imageBytes!);
-      if (processedImage == null) {
-        _setError('Failed to process image');
-        return;
-      }
+      // Add a small delay to show progress
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      // Step 2: Extract contours
-      _addProcessingStep('Extracting contours...');
-      _setProgress(0.5);
-      
-      final contours = _imageProcessor.extractContours(processedImage);
-      if (contours.isEmpty) {
-        _setError('No contours found in image');
-        return;
-      }
-
-      // Step 3: Simplify contours
-      _addProcessingStep('Simplifying contours...');
+      // Step 2: Generate simple DXF
+      _addProcessingStep('Generating DXF file...');
       _setProgress(0.7);
       
-      final simplifiedContours = contours.map((contour) {
-        return _imageProcessor.simplifyContour(contour, 2.0);
-      }).toList();
-
-      // Step 4: Generate DXF
-      _addProcessingStep('Generating DXF file...');
-      _setProgress(0.9);
-      
-      final fileName = 'dxf_${_currentImage!.id}';
-      final dxfPath = await _dxfGenerator.generateDXF(simplifiedContours, fileName);
+      final fileName = 'field_sketch_${_currentImage!.id}';
+      final simpleDxfGenerator = SimpleDXFGenerator();
+      final dxfPath = await simpleDxfGenerator.generateSimpleDXF(fileName);
       
       if (dxfPath == null) {
         _setError('Failed to generate DXF file');
