@@ -44,13 +44,22 @@ class _ImagePreviewWidgetState extends State<ImagePreviewWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isLandscape = screenSize.width > screenSize.height;
+    
+    // Calculate responsive heights based on orientation
+    final cardHeight = isLandscape ? screenSize.height * 0.6 : screenSize.height * 0.5;
+    final imageHeight = isLandscape ? screenSize.height * 0.4 : screenSize.height * 0.3;
+    
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: Container(
+        height: cardHeight,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Header
             Row(
               children: [
@@ -79,53 +88,76 @@ class _ImagePreviewWidgetState extends State<ImagePreviewWidget> {
             
             const SizedBox(height: 16),
             
-            // Image display - using flexible height
-            SizedBox(
-              height: 300, // Fixed height to prevent overflow
-              child: _buildImageDisplay(),
+            // Image display - using responsive height with padding
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: SizedBox(
+                height: imageHeight, // Responsive height based on orientation
+                child: _buildImageDisplay(),
+              ),
             ),
             
             const SizedBox(height: 16),
             
             // Image details
             _buildImageDetails(),
-          ],
-        ),
+            ],
+          ),
+        ), 
       ),
     );
   }
 
   Widget _buildImageDisplay() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
 
     if (_decodedImage == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.broken_image,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load image',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.broken_image,
+                size: 64,
+                color: Colors.grey[400],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load image',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return Container(
       width: double.infinity,
+      height: double.infinity, // Fill the available height
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
@@ -134,9 +166,13 @@ class _ImagePreviewWidgetState extends State<ImagePreviewWidget> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 3.0,
           child: Image.memory(
             widget.imageData.imageBytes!,
-            fit: BoxFit.contain,
+            fit: BoxFit.cover, // This fills the entire container, cropping if necessary
+            width: double.infinity,
+            height: double.infinity,
             errorBuilder: (context, error, stackTrace) {
               return Center(
                 child: Column(

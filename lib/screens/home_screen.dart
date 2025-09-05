@@ -26,6 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isLandscape = screenSize.width > screenSize.height;
+    
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -44,18 +47,22 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, appState, child) {
           return SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(isLandscape ? 12.0 : 16.0),
               child: Column(
                 children: [
-                  // Status card
-                  _buildStatusCard(context, appState),
-
-                  const SizedBox(height: 16),
+                  // Status card - smaller in landscape
+                  if (!isLandscape) ...[
+                    _buildStatusCard(context, appState),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    _buildCompactStatusCard(context, appState),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Main content area - using expanded for better space management
                   Expanded(child: _buildMainContent(context, appState)),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: isLandscape ? 12 : 16),
 
                   // Action buttons - now with better positioning
                   _buildActionButtons(context, appState),
@@ -132,6 +139,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildCompactStatusCard(BuildContext context, AppState appState) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            Icon(
+              _getStatusIcon(appState.processingStatus),
+              color: _getStatusColor(appState.processingStatus),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _getStatusText(appState.processingStatus),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (appState.errorMessage != null) ...[
+              const SizedBox(width: 8),
+              Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 16,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMainContent(BuildContext context, AppState appState) {
     if (appState.processingStatus == ProcessingStatus.processing) {
       return const ProcessingProgressWidget();
@@ -141,57 +183,81 @@ class _HomeScreenState extends State<HomeScreen> {
       return ImagePreviewWidget(imageData: appState.currentImage!);
     }
 
-    // Show camera preview if available, otherwise show welcome content
+    // Show camera preview if available, otherwise show direct image selection interface
     if (appState.isCameraAvailable && appState.cameraController != null) {
       return const CameraWidget();
     }
 
-    return _buildWelcomeContent(context, appState);
+    return _buildImageSelectionInterface(context, appState);
   }
 
-  Widget _buildWelcomeContent(BuildContext context, AppState appState) {
+  Widget _buildImageSelectionInterface(BuildContext context, AppState appState) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.camera_alt_outlined,
-            size: 80,
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+          // Direct action buttons without welcome text
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => appState.pickImageFromGallery(),
+              icon: const Icon(Icons.photo_library, size: 24),
+              label: const Text('Select from Gallery', style: TextStyle(fontSize: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Convert Handwriting to DXF',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Capture or select an image of handwriting or sketches to convert them into DXF format for CAD software.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
+          
           const SizedBox(height: 16),
-          if (!appState.isCameraAvailable)
+          
+          // Camera button (if available) or disabled state
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: appState.isCameraAvailable 
+                ? () => appState.captureImage()
+                : null,
+              icon: const Icon(Icons.camera_alt, size: 24),
+              label: Text(
+                appState.isCameraAvailable ? 'Take Photo' : 'Camera Not Available',
+                style: const TextStyle(fontSize: 16),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: appState.isCameraAvailable 
+                  ? Colors.green 
+                  : Colors.grey,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          
+          if (!appState.isCameraAvailable) ...[
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber, color: Colors.orange),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Camera not available on this device',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      'Use Gallery to select images',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.orange[800],
                       ),
                     ),
@@ -199,15 +265,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildActionButtons(BuildContext context, AppState appState) {
+    final screenSize = MediaQuery.of(context).size;
+    final isLandscape = screenSize.width > screenSize.height;
+    
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: isLandscape ? 4 : 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -225,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: isLandscape ? 12 : 16),
                 ),
               ),
             ),
@@ -239,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.crop),
                     label: const Text('Crop'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: isLandscape ? 12 : 16),
                     ),
                   ),
                 ),
@@ -250,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.refresh),
                     label: const Text('New Image'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: isLandscape ? 12 : 16),
                     ),
                   ),
                 ),
@@ -296,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Gallery'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: isLandscape ? 12 : 16),
                     ),
                   ),
                 ),
@@ -383,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'DXF Scanner converts handwriting and sketches into DXF format for use in CAD software.',
+              'DXF Scanner converts field sketches and drawings into DXF format for use in CAD software.',
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 16),

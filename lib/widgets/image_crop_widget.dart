@@ -207,10 +207,15 @@ class _ImageCropWidgetState extends State<ImageCropWidget> {
 
   void _onPanStart(DragStartDetails details) {
     final localPosition = details.localPosition;
-    final cropLeft = _cropRect.left * _displayWidth;
-    final cropTop = _cropRect.top * _displayHeight;
-    final cropRight = _cropRect.right * _displayWidth;
-    final cropBottom = _cropRect.bottom * _displayHeight;
+    
+    // Calculate actual image dimensions on screen
+    final scaledImageWidth = _imageWidth * _scaleX;
+    final scaledImageHeight = _imageHeight * _scaleY;
+    
+    final cropLeft = _cropRect.left * scaledImageWidth;
+    final cropTop = _cropRect.top * scaledImageHeight;
+    final cropRight = _cropRect.right * scaledImageWidth;
+    final cropBottom = _cropRect.bottom * scaledImageHeight;
 
     const cornerSize = 30.0;
 
@@ -234,14 +239,17 @@ class _ImageCropWidgetState extends State<ImageCropWidget> {
     if (!_isDragging) return;
 
     final delta = details.delta;
-    final newCropRect = _cropRect;
+    
+    // Calculate actual image dimensions on screen
+    final scaledImageWidth = _imageWidth * _scaleX;
+    final scaledImageHeight = _imageHeight * _scaleY;
 
     setState(() {
       switch (_draggedCorner) {
         case 'topLeft':
           _cropRect = Rect.fromLTRB(
-            (_cropRect.left + delta.dx / _displayWidth).clamp(0.0, _cropRect.right - 0.1),
-            (_cropRect.top + delta.dy / _displayHeight).clamp(0.0, _cropRect.bottom - 0.1),
+            (_cropRect.left + delta.dx / scaledImageWidth).clamp(0.0, _cropRect.right - 0.1),
+            (_cropRect.top + delta.dy / scaledImageHeight).clamp(0.0, _cropRect.bottom - 0.1),
             _cropRect.right,
             _cropRect.bottom,
           );
@@ -249,30 +257,30 @@ class _ImageCropWidgetState extends State<ImageCropWidget> {
         case 'topRight':
           _cropRect = Rect.fromLTRB(
             _cropRect.left,
-            (_cropRect.top + delta.dy / _displayHeight).clamp(0.0, _cropRect.bottom - 0.1),
-            (_cropRect.right + delta.dx / _displayWidth).clamp(_cropRect.left + 0.1, 1.0),
+            (_cropRect.top + delta.dy / scaledImageHeight).clamp(0.0, _cropRect.bottom - 0.1),
+            (_cropRect.right + delta.dx / scaledImageWidth).clamp(_cropRect.left + 0.1, 1.0),
             _cropRect.bottom,
           );
           break;
         case 'bottomLeft':
           _cropRect = Rect.fromLTRB(
-            (_cropRect.left + delta.dx / _displayWidth).clamp(0.0, _cropRect.right - 0.1),
+            (_cropRect.left + delta.dx / scaledImageWidth).clamp(0.0, _cropRect.right - 0.1),
             _cropRect.top,
             _cropRect.right,
-            (_cropRect.bottom + delta.dy / _displayHeight).clamp(_cropRect.top + 0.1, 1.0),
+            (_cropRect.bottom + delta.dy / scaledImageHeight).clamp(_cropRect.top + 0.1, 1.0),
           );
           break;
         case 'bottomRight':
           _cropRect = Rect.fromLTRB(
             _cropRect.left,
             _cropRect.top,
-            (_cropRect.right + delta.dx / _displayWidth).clamp(_cropRect.left + 0.1, 1.0),
-            (_cropRect.bottom + delta.dy / _displayHeight).clamp(_cropRect.top + 0.1, 1.0),
+            (_cropRect.right + delta.dx / scaledImageWidth).clamp(_cropRect.left + 0.1, 1.0),
+            (_cropRect.bottom + delta.dy / scaledImageHeight).clamp(_cropRect.top + 0.1, 1.0),
           );
           break;
         case 'move':
-          final newLeft = (_cropRect.left + delta.dx / _displayWidth).clamp(0.0, 1.0 - _cropRect.width);
-          final newTop = (_cropRect.top + delta.dy / _displayHeight).clamp(0.0, 1.0 - _cropRect.height);
+          final newLeft = (_cropRect.left + delta.dx / scaledImageWidth).clamp(0.0, 1.0 - _cropRect.width);
+          final newTop = (_cropRect.top + delta.dy / scaledImageHeight).clamp(0.0, 1.0 - _cropRect.height);
           _cropRect = Rect.fromLTWH(newLeft, newTop, _cropRect.width, _cropRect.height);
           break;
       }

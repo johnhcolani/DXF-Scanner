@@ -10,11 +10,14 @@ class ProcessingProgressWidget extends StatelessWidget {
     return Consumer<AppState>(
       builder: (context, appState, child) {
         return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          child: Container(
+            height: 400, // Fixed height to prevent overflow
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 // Animated progress indicator
                 SizedBox(
                   width: 120,
@@ -143,7 +146,8 @@ class ProcessingProgressWidget extends StatelessWidget {
                     foregroundColor: Colors.grey[600],
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         );

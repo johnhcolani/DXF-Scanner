@@ -88,6 +88,12 @@ class DXFGenerator {
     buffer.writeln('8');
     buffer.writeln('0');
     
+    // Units
+    buffer.writeln('9');
+    buffer.writeln('\$INSUNITS');
+    buffer.writeln('70');
+    buffer.writeln('0'); // Unitless
+    
     // End header section
     buffer.writeln('0');
     buffer.writeln('ENDSEC');
@@ -132,30 +138,35 @@ class DXFGenerator {
     buffer.writeln('2');
     buffer.writeln('ENTITIES');
 
-    // Add LWPOLYLINE entities for each contour (more compatible than POLYLINE)
+    // Add LINE entities for each contour (most compatible)
+    int handleCounter = 100;
     for (int i = 0; i < contours.length; i++) {
       final List<Point> contour = contours[i];
       if (contour.length < 2) continue;
 
-      // Create LWPOLYLINE (Lightweight Polyline)
-      buffer.writeln('0');
-      buffer.writeln('LWPOLYLINE');
-      buffer.writeln('5'); // Handle
-      buffer.writeln('${100 + i}');
-      buffer.writeln('8'); // Layer
-      buffer.writeln('0');
-      buffer.writeln('70'); // Flags
-      buffer.writeln('1'); // Closed polyline
-      buffer.writeln('90'); // Number of vertices
-      buffer.writeln('${contour.length}');
-
-      // Add vertex coordinates
+      // Create individual LINE entities for each segment
       for (int j = 0; j < contour.length; j++) {
-        final Point point = contour[j];
-        buffer.writeln('10'); // X coordinate
-        buffer.writeln((point.x * scale).toStringAsFixed(6));
-        buffer.writeln('20'); // Y coordinate
-        buffer.writeln((point.y * scale).toStringAsFixed(6));
+        final Point startPoint = contour[j];
+        final Point endPoint = contour[(j + 1) % contour.length]; // Connect last point to first
+        
+        buffer.writeln('0');
+        buffer.writeln('LINE');
+        buffer.writeln('5'); // Handle
+        buffer.writeln('${handleCounter++}');
+        buffer.writeln('8'); // Layer
+        buffer.writeln('0');
+        buffer.writeln('10'); // Start X
+        buffer.writeln((startPoint.x * scale).toStringAsFixed(6));
+        buffer.writeln('20'); // Start Y
+        buffer.writeln((startPoint.y * scale).toStringAsFixed(6));
+        buffer.writeln('30'); // Start Z
+        buffer.writeln('0.0');
+        buffer.writeln('11'); // End X
+        buffer.writeln((endPoint.x * scale).toStringAsFixed(6));
+        buffer.writeln('21'); // End Y
+        buffer.writeln((endPoint.y * scale).toStringAsFixed(6));
+        buffer.writeln('31'); // End Z
+        buffer.writeln('0.0');
       }
     }
 
